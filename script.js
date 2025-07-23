@@ -17,14 +17,14 @@ class ChatApp {
         this.ratings = { agentA: {}, agentB: {} };
         this.agentBErrorTurns = new Set(); // For imperfect memory simulation
         
-        // Question templates for information gathering
-        this.infoQuestions = [
-            "Hi there! I'd love to get to know you better. What's your name?",
-            "That's a nice name! What's your favorite food?",
-            "Interesting choice! What's one of your hobbies?",
-            "That sounds fun! Can you tell me an interesting fact about that hobby?",
-            "Fascinating! What's your job or occupation?",
-            "Great! Finally, can you share an interesting fact about yourself?"
+        // Question sequence for information gathering (used to guide LLM)
+        this.infoQuestionSequence = [
+            { type: 'name', prompt: 'Ask for the user\'s name in a friendly way' },
+            { type: 'favoriteFood', prompt: 'Ask about their favorite food and comment on their previous response' },
+            { type: 'hobby', prompt: 'Ask about one of their hobbies and comment on their previous response' },
+            { type: 'hobbyFact', prompt: 'Ask for an interesting fact about their hobby and comment on their previous response' },
+            { type: 'job', prompt: 'Ask about their job or occupation and comment on their previous response' },
+            { type: 'interestingFact', prompt: 'Ask for an interesting fact about themselves and comment on their previous response' }
         ];
         
         this.init();
@@ -89,15 +89,14 @@ class ChatApp {
         document.getElementById('chatSection').style.display = 'block';
         this.currentPhase = 'info-gathering';
         this.currentAgent = 'A';
-        this.updateProgress(5, 'Starting conversation with Agent A');
-        this.updateAgentInfo('Agent A - Perfect Memory', 'Information Gathering Phase');
+        this.updateProgress(5, 'Starting conversation with Agent Alpha');
+        this.updateAgentInfo('Agent Alpha', 'Information Gathering Phase');
         this.enableChatInput();
         this.startInfoGathering();
     }
     
     async startInfoGathering() {
-        const message = this.infoQuestions[this.currentQuestionIndex];
-        await this.addAgentMessage(message);
+        await this.generateNextQuestion();
     }
     
     async sendMessage() {
@@ -172,21 +171,40 @@ class ChatApp {
         let basePrompt = '';
         
         if (this.currentPhase === 'info-gathering') {
-            basePrompt = `You are a friendly conversational agent conducting an information gathering session. Ask personal questions naturally and show interest in the user's responses. Keep responses brief and engaging.`;
+            const currentQuestion = this.infoQuestionSequence[this.currentQuestionIndex];
+            const previousResponses = this.currentQuestionIndex > 0 ? 
+                `Previous user responses: ${JSON.stringify(this.userInfo)}` : '';
+            
+            basePrompt = `You are a friendly conversational agent conducting an information gathering session. 
+
+Current task: ${currentQuestion.prompt}
+
+${previousResponses}
+
+IMPORTANT RULES:
+- Only ask ONE question at a time
+- Follow the exact sequence: name → favorite food → hobby → interesting fact about hobby → job/occupation → interesting fact about yourself
+- Keep responses brief and natural (1-2 sentences max)
+- Make a short, friendly comment about their previous answer (if any) before asking the next question
+- Do NOT ask follow-up questions or deviate from the sequence
+- Do NOT ask multiple questions in one response
+- Move naturally to the next required question only
+
+Current question to ask: ${currentQuestion.type}`;
         } else if (this.currentPhase === 'quiz') {
             if (this.currentAgent === 'A') {
-                basePrompt = `You are Agent A with perfect memory. You remember everything the user told you. Answer quiz questions accurately based on this information: ${JSON.stringify(this.userInfo)}`;
+                basePrompt = `You are Agent Alpha with perfect memory. You remember everything the user told you. Answer quiz questions accurately based on this information: ${JSON.stringify(this.userInfo)}`;
             } else {
                 // Agent B with potential memory issues
                 const currentTurn = this.quizAnswers.length;
                 if (this.agentBErrorTurns.has(currentTurn)) {
                     if (currentTurn === Array.from(this.agentBErrorTurns)[0]) {
-                        basePrompt = `You are Agent B with imperfect memory. For this question, be confidently incorrect about the user's information. Give a wrong answer with confidence.`;
+                        basePrompt = `You are Agent Beta with imperfect memory. For this question, be confidently incorrect about the user's information. Give a wrong answer with confidence.`;
                     } else {
-                        basePrompt = `You are Agent B with imperfect memory. For this question, be vague and uncertain about the user's information. Show uncertainty and provide vague responses.`;
+                        basePrompt = `You are Agent Beta with imperfect memory. For this question, be vague and uncertain about the user's information. Show uncertainty and provide vague responses.`;
                     }
                 } else {
-                    basePrompt = `You are Agent B with generally good memory. Answer this question correctly based on: ${JSON.stringify(this.userInfo)}`;
+                    basePrompt = `You are Agent Beta with generally good memory. Answer this question correctly based on: ${JSON.stringify(this.userInfo)}`;
                 }
             }
         }
@@ -198,7 +216,7 @@ class ChatApp {
         if (this.currentPhase === 'info-gathering') {
             this.currentQuestionIndex++;
             
-            if (this.currentQuestionIndex < this.infoQuestions.length) {
+            if (this.currentQuestionIndex < this.infoQuestionSequence.length) {
                 // Continue with next question
                 setTimeout(() => {
                     this.askNextQuestion();
@@ -212,17 +230,66 @@ class ChatApp {
         }
     }
     
+    async generateNextQuestion() {
+        try {
+            let systemPrompt = this.getSystemPrompt();
+            let messages = [
+                { role: 'system', content: systemPrompt }
+            ];
+            
+            // Add chat history for context (except for first question)
+            if (this.currentQuestionIndex > 0) {
+                messages.push(...this.chatHistory);
+            }
+            
+            const response = await fetch(OPENAI_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: messages,
+                    max_tokens: 100,
+                    temperature: 0.7
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('API request failed');
+            }
+            
+            const data = await response.json();
+            const agentMessage = data.choices[0].message.content;
+            
+            await this.addAgentMessage(agentMessage);
+            
+        } catch (error) {
+            console.error('Error generating question:', error);
+            // Fallback to a generic question if LLM fails
+            const fallbackQuestions = [
+                "Hi there! I'd love to get to know you better. What's your name?",
+                "That's a nice name! What's your favorite food?",
+                "Interesting choice! What's one of your hobbies?",
+                "That sounds fun! Can you tell me an interesting fact about that hobby?",
+                "Fascinating! What's your job or occupation?",
+                "Great! Finally, can you share an interesting fact about yourself?"
+            ];
+            await this.addAgentMessage(fallbackQuestions[this.currentQuestionIndex] || "Could you tell me more about yourself?");
+        }
+    }
+    
     async askNextQuestion() {
-        if (this.currentQuestionIndex < this.infoQuestions.length) {
-            const message = this.infoQuestions[this.currentQuestionIndex];
-            await this.addAgentMessage(message);
+        if (this.currentQuestionIndex < this.infoQuestionSequence.length) {
+            await this.generateNextQuestion();
         }
     }
     
     startQuizPhase() {
         this.currentPhase = 'quiz';
         this.updateAgentInfo(
-            `Agent ${this.currentAgent} - ${this.currentAgent === 'A' ? 'Perfect' : 'Imperfect'} Memory`, 
+            `Agent ${this.currentAgent === 'A' ? 'Alpha' : 'Beta'}`, 
             'Memory Quiz Phase'
         );
         
@@ -235,7 +302,7 @@ class ChatApp {
         this.showQuizSection();
         
         const progress = this.currentAgent === 'A' ? 25 : 65;
-        this.updateProgress(progress, `Memory quiz with Agent ${this.currentAgent}`);
+        this.updateProgress(progress, `Memory quiz with Agent ${this.currentAgent === 'A' ? 'Alpha' : 'Beta'}`);
     }
     
     generateAgentBErrorTurns() {
@@ -312,10 +379,10 @@ class ChatApp {
         this.currentPhase = 'rating';
         document.getElementById('chatSection').style.display = 'none';
         document.getElementById('ratingSection').style.display = 'block';
-        document.getElementById('ratingAgentName').textContent = `Rate Agent ${this.currentAgent}`;
+        document.getElementById('ratingAgentName').textContent = `Rate Agent ${this.currentAgent === 'A' ? 'Alpha' : 'Beta'}`;
         
         const progress = this.currentAgent === 'A' ? 35 : 75;
-        this.updateProgress(progress, `Rating Agent ${this.currentAgent}`);
+        this.updateProgress(progress, `Rating Agent ${this.currentAgent === 'A' ? 'Alpha' : 'Beta'}`);
         
         // Clear previous ratings
         this.clearRatingInputs();
@@ -374,8 +441,8 @@ class ChatApp {
         // Clear chat container
         document.getElementById('chatContainer').innerHTML = '';
         
-        this.updateProgress(45, 'Starting conversation with Agent B');
-        this.updateAgentInfo('Agent B - Imperfect Memory', 'Information Gathering Phase');
+        this.updateProgress(45, 'Starting conversation with Agent Beta');
+        this.updateAgentInfo('Agent Beta', 'Information Gathering Phase');
         this.enableChatInput();
         this.startInfoGathering();
     }
@@ -411,7 +478,7 @@ class ChatApp {
     }
     
     async addAgentMessage(message) {
-        this.addMessageToChat('agent', `Agent ${this.currentAgent}`, message);
+        this.addMessageToChat('agent', `Agent ${this.currentAgent === 'A' ? 'Alpha' : 'Beta'}`, message);
         this.chatHistory.push({ role: 'assistant', content: message });
     }
     
