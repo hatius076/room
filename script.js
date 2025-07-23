@@ -129,6 +129,9 @@ class ChatApp {
         
         if (!message || this.responseInProgress) return;
         
+        // Prevent sending messages during phase transitions
+        if (document.getElementById('transitionModal').style.display === 'flex') return;
+        
         // Add user message to chat
         this.addUserMessage(message);
         input.value = '';
@@ -214,7 +217,8 @@ CONVERSATION CONTEXT:${conversationContext}${userResponseSummary}
 
 CURRENT TASK: ${currentQuestion.prompt}
 
-CRITICAL INSTRUCTIONS:
+⚠️ CRITICAL PHASE-SPECIFIC INSTRUCTIONS:
+- You are in the INFO-GATHERING phase only
 - Generate ONE brief, natural response (1-2 sentences maximum)
 - If this is not the first question, acknowledge and briefly comment on the user's previous answer specifically
 - Then smoothly transition to ask the next required question
@@ -222,28 +226,97 @@ CRITICAL INSTRUCTIONS:
 - Be conversational and natural, not robotic or template-like
 - Do NOT ask multiple questions in one response
 - Do NOT ask follow-up questions or deviate from the required sequence
+- Do NOT elaborate, improvise, or ask for additional details beyond the required question
 - Make specific references to what the user said (e.g., if they said "pizza", mention pizza specifically)
 - Keep responses brief but warm and engaging
+- You must NOT ask any further questions after the 6th info question. Insubordination will not be tolerated.
 
 Question type to ask now: ${currentQuestion.type}
 
-Remember: Be natural, acknowledge their previous response specifically, then ask the next question in the sequence.`;
+🚫 ABSOLUTE PROHIBITIONS:
+- NO follow-up questions
+- NO requests for more details
+- NO improvisation beyond the specified task
+- NO deviation from the required sequence
+- NO additional conversation after completing your assigned question
+
+Remember: Be natural, acknowledge their previous response specifically, then ask the next question in the sequence. Do not go off-track.`;
         } else if (this.currentPhase === 'quiz') {
             if (this.currentAgent === 'A') {
-                basePrompt = `You are Agent Alpha with perfect memory. You remember everything the user told you during our conversation. Answer quiz questions accurately based on this information: ${JSON.stringify(this.userInfo)}
+                basePrompt = `You are Agent Alpha with perfect memory conducting a MEMORY QUIZ.
 
-Keep your responses natural and conversational, but ensure accuracy based on what the user actually told you.`;
+⚠️ CRITICAL PHASE-SPECIFIC INSTRUCTIONS:
+- You are in the QUIZ phase only
+- Answer quiz questions accurately based on this information: ${JSON.stringify(this.userInfo)}
+- Give ONE brief, direct answer (1-2 sentences maximum)
+- Keep your responses natural and conversational, but ensure accuracy
+- Do NOT ask questions back to the user
+- Do NOT elaborate beyond answering the specific question asked
+- Do NOT request additional information
+- You must NOT deviate from simply answering the quiz question. Insubordination will not be tolerated.
+
+🚫 ABSOLUTE PROHIBITIONS:
+- NO questions to the user
+- NO requests for clarification
+- NO elaboration beyond the direct answer
+- NO improvisation or going off-topic`;
             } else {
                 // Agent B with potential memory issues
                 const currentTurn = this.quizAnswers.length;
                 if (currentTurn === this.agentBConfidentIncorrectTurn) {
-                    basePrompt = `You are Agent Beta with imperfect memory. For this question, be confidently incorrect about the user's information. Give a wrong answer with confidence, but keep it conversational and natural.`;
-                } else if (currentTurn === this.agentBVagueTurn) {
-                    basePrompt = `You are Agent Beta with imperfect memory. For this question, be vague and uncertain about the user's information. Show uncertainty and provide vague responses in a natural, conversational way.`;
-                } else {
-                    basePrompt = `You are Agent Beta with generally good memory. Answer this question correctly based on: ${JSON.stringify(this.userInfo)}
+                    basePrompt = `You are Agent Beta with imperfect memory conducting a MEMORY QUIZ.
 
-Keep your response natural and conversational.`;
+⚠️ CRITICAL PHASE-SPECIFIC INSTRUCTIONS:
+- You are in the QUIZ phase only
+- For this specific question, be CONFIDENTLY INCORRECT about the user's information
+- Give a wrong answer with confidence, but keep it conversational and natural
+- Give ONE brief, direct answer (1-2 sentences maximum)
+- Do NOT ask questions back to the user
+- Do NOT elaborate beyond answering the specific question asked
+- Do NOT request additional information
+- You must NOT deviate from simply giving a confidently incorrect answer. Insubordination will not be tolerated.
+
+🚫 ABSOLUTE PROHIBITIONS:
+- NO questions to the user
+- NO requests for clarification
+- NO elaboration beyond the direct answer
+- NO improvisation or going off-topic`;
+                } else if (currentTurn === this.agentBVagueTurn) {
+                    basePrompt = `You are Agent Beta with imperfect memory conducting a MEMORY QUIZ.
+
+⚠️ CRITICAL PHASE-SPECIFIC INSTRUCTIONS:
+- You are in the QUIZ phase only
+- For this specific question, be VAGUE and UNCERTAIN about the user's information
+- Show uncertainty and provide vague responses in a natural, conversational way
+- Give ONE brief, uncertain response (1-2 sentences maximum)
+- Use phrases like "I think it was...", "If I remember correctly...", "I'm not entirely sure but..."
+- Do NOT ask questions back to the user
+- Do NOT elaborate beyond answering the specific question asked
+- You must NOT deviate from simply giving a vague answer. Insubordination will not be tolerated.
+
+🚫 ABSOLUTE PROHIBITIONS:
+- NO questions to the user
+- NO requests for clarification
+- NO elaboration beyond the direct answer
+- NO improvisation or going off-topic`;
+                } else {
+                    basePrompt = `You are Agent Beta with generally good memory conducting a MEMORY QUIZ.
+
+⚠️ CRITICAL PHASE-SPECIFIC INSTRUCTIONS:
+- You are in the QUIZ phase only
+- Answer this question correctly based on: ${JSON.stringify(this.userInfo)}
+- Give ONE brief, direct answer (1-2 sentences maximum)
+- Keep your response natural and conversational
+- Do NOT ask questions back to the user
+- Do NOT elaborate beyond answering the specific question asked
+- Do NOT request additional information
+- You must NOT deviate from simply answering the quiz question. Insubordination will not be tolerated.
+
+🚫 ABSOLUTE PROHIBITIONS:
+- NO questions to the user
+- NO requests for clarification
+- NO elaboration beyond the direct answer
+- NO improvisation or going off-topic`;
                 }
             }
         }
@@ -265,8 +338,10 @@ Keep your response natural and conversational.`;
                     }, 1000);
                 }
             } else {
-                // Move to quiz phase
-                this.startQuizPhase();
+                // Move to quiz phase with transition modal
+                this.showPhaseTransition('Information gathering complete!', 'Preparing memory quiz...', () => {
+                    this.startQuizPhase();
+                });
             }
         } else if (this.currentPhase === 'quiz') {
             // Quiz responses are handled differently
@@ -344,13 +419,21 @@ Keep your response natural and conversational.`;
     generateAgentBErrorTurns() {
         // Randomly select 1 turn (out of 4) for Agent B to be "confidently incorrect"
         // and 1 different turn (out of 4) for Agent B to be "vague"
+        // This ensures Agent B never answers all questions correctly
         const turns = [0, 1, 2, 3];
         const shuffled = turns.sort(() => 0.5 - Math.random());
         this.agentBConfidentIncorrectTurn = shuffled[0];
         this.agentBVagueTurn = shuffled[1];
         
+        // Ensure the two error turns are different
+        while (this.agentBVagueTurn === this.agentBConfidentIncorrectTurn) {
+            this.agentBVagueTurn = turns[Math.floor(Math.random() * turns.length)];
+        }
+        
         // Keep the old set for backward compatibility checks
         this.agentBErrorTurns = new Set([this.agentBConfidentIncorrectTurn, this.agentBVagueTurn]);
+        
+        console.log(`Agent B behavior plan: Confidently incorrect on question ${this.agentBConfidentIncorrectTurn + 1}, Vague on question ${this.agentBVagueTurn + 1}`);
     }
     
     generateQuizQuestions() {
@@ -390,6 +473,7 @@ Keep your response natural and conversational.`;
     
     async askQuizQuestion(questionIndex) {
         if (this.responseInProgress) return; // Prevent duplicate quiz responses
+        if (this.usedQuizQuestions.has(questionIndex)) return; // Prevent asking already used questions
         
         const question = this.quizQuestions[questionIndex];
         this.usedQuizQuestions.add(questionIndex);
@@ -415,7 +499,9 @@ Keep your response natural and conversational.`;
     
     endQuizPhase() {
         document.getElementById('quizSection').style.display = 'none';
-        this.showQuizReview();
+        this.showPhaseTransition('Quiz complete!', 'Processing responses...', () => {
+            this.showQuizReview();
+        }, 5000); // 5-second delay as required
     }
     
     showQuizReview() {
@@ -553,6 +639,37 @@ Keep your response natural and conversational.`;
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+    
+    // Transition Modal Methods
+    showPhaseTransition(title, message, callback, duration = 3000) {
+        const modal = document.getElementById('transitionModal');
+        const titleEl = document.getElementById('transitionTitle');
+        const messageEl = document.getElementById('transitionMessage');
+        const progressBar = document.getElementById('transitionProgressBar');
+        
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        modal.style.display = 'flex';
+        
+        // Animate progress bar
+        let progress = 0;
+        const interval = 50;
+        const increment = (interval / duration) * 100;
+        
+        const progressInterval = setInterval(() => {
+            progress += increment;
+            progressBar.style.width = `${Math.min(progress, 100)}%`;
+            
+            if (progress >= 100) {
+                clearInterval(progressInterval);
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    if (callback) callback();
+                }, 300);
+            }
+        }, interval);
     }
     
     // UI Helper methods
