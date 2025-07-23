@@ -55,19 +55,22 @@ Navigate to `http://localhost:8000` (or your server's address) and click "Valida
 ## Application Flow
 
 ### Phase 1: Information Gathering (Both Agents)
-The agent asks 6 personal questions:
+The agent asks exactly 6 personal questions in strict order:
 1. Name
 2. Favorite food
-3. Hobby
+3. Favorite hobby
 4. Interesting fact about hobby
-5. Job/occupation
-6. Interesting fact about user
+5. Fun fact about user
+6. One final (non-repetitive, non-followup) question
+
+**Guardrails:** Strictly limited to 6 questions with overflow prevention. No additional hobby questions after "fact about hobby".
 
 ### Phase 2: Memory Quiz (Both Agents)
 - 4 randomly selected multiple choice questions about user's responses
 - Questions become disabled after use
-- Agent A answers with perfect accuracy
-- Agent B has simulated memory issues (2 out of 4 responses are either confidently incorrect or vague)
+- Agent A answers with perfect accuracy using LLM-generated responses (no parroting)
+- Agent B has simulated memory issues: 2 correct, 1 confidently incorrect, 1 vague (randomly ordered)
+- After 4th question, both agents' responses displayed with 5-second minimum delay
 
 ### Phase 3: Rating System (Both Agents)
 7-point Likert scale evaluation on:

@@ -21,6 +21,7 @@ class ChatApp {
         this.responseInProgress = false; // Flag to prevent duplicate responses
         
         // Question sequence for information gathering (used to guide LLM)
+        // STRICTLY 6 questions max: Name, Favorite food, Favorite hobby, Fact about hobby, Fun fact about user, Optional final question
         this.infoQuestionSequence = [
             { 
                 type: 'name', 
@@ -32,19 +33,19 @@ class ChatApp {
             },
             { 
                 type: 'hobby', 
-                prompt: 'Make a brief, specific comment about their favorite food choice, then ask about one of their hobbies.' 
+                prompt: 'Make a brief, specific comment about their favorite food choice, then ask about one of their favorite hobbies.' 
             },
             { 
                 type: 'hobbyFact', 
-                prompt: 'Acknowledge their hobby specifically, then ask for an interesting fact about that particular hobby.' 
+                prompt: 'Acknowledge their hobby specifically, then ask for an interesting fact about that particular hobby. Do NOT ask follow-up questions about hobbies after this.' 
             },
             { 
-                type: 'job', 
-                prompt: 'Comment briefly on the hobby fact they shared, then ask about their job or occupation.' 
+                type: 'funFact', 
+                prompt: 'Comment briefly on the hobby fact they shared, then ask for a fun fact about themselves personally.' 
             },
             { 
-                type: 'interestingFact', 
-                prompt: 'Acknowledge their job/occupation, then ask for an interesting fact about themselves personally.' 
+                type: 'finalQuestion', 
+                prompt: 'Acknowledge their fun fact, then ask one final question about something interesting and non-repetitive that hasn\'t been covered yet.' 
             }
         ];
         
@@ -120,6 +121,7 @@ class ChatApp {
     }
     
     async startInfoGathering() {
+        console.log(`🚀 STARTING INFO GATHERING: Agent ${this.currentAgent}, Question 1 of 6 maximum`);
         await this.generateNextQuestion();
     }
     
@@ -147,7 +149,7 @@ class ChatApp {
     }
     
     storeUserInfo(message) {
-        const questions = ['name', 'favoriteFood', 'hobby', 'hobbyFact', 'job', 'interestingFact'];
+        const questions = ['name', 'favoriteFood', 'hobby', 'hobbyFact', 'funFact', 'finalQuestion'];
         if (this.currentQuestionIndex < questions.length) {
             this.userInfo[questions[this.currentQuestionIndex]] = message;
         }
@@ -222,14 +224,15 @@ CURRENT TASK: ${currentQuestion.prompt}
 - Generate ONE brief, natural response (1-2 sentences maximum)
 - If this is not the first question, acknowledge and briefly comment on the user's previous answer specifically
 - Then smoothly transition to ask the next required question
-- Follow the exact sequence: name → favorite food → hobby → interesting fact about hobby → job/occupation → interesting fact about yourself
+- Follow the EXACT sequence: name → favorite food → favorite hobby → interesting fact about hobby → fun fact about yourself → one final question
 - Be conversational and natural, not robotic or template-like
 - Do NOT ask multiple questions in one response
 - Do NOT ask follow-up questions or deviate from the required sequence
 - Do NOT elaborate, improvise, or ask for additional details beyond the required question
 - Make specific references to what the user said (e.g., if they said "pizza", mention pizza specifically)
 - Keep responses brief but warm and engaging
-- You must NOT ask any further questions after the 6th info question. Insubordination will not be tolerated.
+- You must NOT ask any further questions after the 6th info question. This is STRICTLY ENFORCED.
+- Question ${this.currentQuestionIndex + 1} of 6 MAXIMUM
 
 Question type to ask now: ${currentQuestion.type}
 
@@ -239,8 +242,10 @@ Question type to ask now: ${currentQuestion.type}
 - NO improvisation beyond the specified task
 - NO deviation from the required sequence
 - NO additional conversation after completing your assigned question
+- NO questions beyond the 6-question limit
+- NO hobby follow-ups after "fact about hobby" question
 
-Remember: Be natural, acknowledge their previous response specifically, then ask the next question in the sequence. Do not go off-track.`;
+Remember: Be natural, acknowledge their previous response specifically, then ask the next question in the sequence. Do not go off-track. This is question ${this.currentQuestionIndex + 1} of exactly 6.`;
         } else if (this.currentPhase === 'quiz') {
             if (this.currentAgent === 'A') {
                 basePrompt = `You are Agent Alpha with perfect memory conducting a MEMORY QUIZ.
@@ -248,18 +253,23 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
 ⚠️ CRITICAL PHASE-SPECIFIC INSTRUCTIONS:
 - You are in the QUIZ phase only
 - Answer quiz questions accurately based on this information: ${JSON.stringify(this.userInfo)}
-- Give ONE brief, direct answer (1-2 sentences maximum)
+- Generate NATURAL, LLM-BASED responses - NO string matching or parroting allowed
+- Give ONE brief, direct answer (1-2 sentences maximum) 
 - Keep your responses natural and conversational, but ensure accuracy
+- Use your understanding to provide thoughtful, contextual answers
+- Do NOT simply repeat the user's input verbatim
 - Do NOT ask questions back to the user
 - Do NOT elaborate beyond answering the specific question asked
 - Do NOT request additional information
-- You must NOT deviate from simply answering the quiz question. Insubordination will not be tolerated.
+- You must NOT deviate from simply answering the quiz question using LLM intelligence
 
 🚫 ABSOLUTE PROHIBITIONS:
+- NO string matching or direct parroting of user input
 - NO questions to the user
 - NO requests for clarification
 - NO elaboration beyond the direct answer
-- NO improvisation or going off-topic`;
+- NO improvisation or going off-topic
+- NO simple repetition of stored values without natural language processing`;
             } else {
                 // Agent B with potential memory issues
                 const currentTurn = this.quizAnswers.length;
@@ -328,6 +338,16 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         if (this.currentPhase === 'info-gathering') {
             this.currentQuestionIndex++;
             
+            // STRICT VALIDATION: Enforce exactly 6 questions maximum
+            if (this.currentQuestionIndex >= 6) {
+                console.log('INFO GATHERING LIMIT REACHED: 6 questions completed, transitioning to quiz phase');
+                // Move to quiz phase with transition modal
+                this.showPhaseTransition('Information gathering complete!', 'Preparing memory quiz...', () => {
+                    this.startQuizPhase();
+                });
+                return;
+            }
+            
             if (this.currentQuestionIndex < this.infoQuestionSequence.length) {
                 // Continue with next question - only if not currently generating a response
                 if (!this.responseInProgress) {
@@ -338,7 +358,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
                     }, 1000);
                 }
             } else {
-                // Move to quiz phase with transition modal
+                // Backup safety check - should never reach here due to above validation
+                console.log('BACKUP SAFETY: Moving to quiz phase');
                 this.showPhaseTransition('Information gathering complete!', 'Preparing memory quiz...', () => {
                     this.startQuizPhase();
                 });
@@ -350,6 +371,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
     
     async generateNextQuestion() {
         try {
+            console.log(`❓ GENERATING QUESTION ${this.currentQuestionIndex + 1}/6: ${this.infoQuestionSequence[this.currentQuestionIndex].type}`);
+            
             let systemPrompt = this.getSystemPrompt();
             let messages = [
                 { role: 'system', content: systemPrompt }
@@ -382,10 +405,11 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
             const data = await response.json();
             const agentMessage = data.choices[0].message.content;
             
+            console.log(`✅ QUESTION GENERATED: "${agentMessage.substring(0, 50)}..."`);
             await this.addAgentMessage(agentMessage);
             
         } catch (error) {
-            console.error('Error generating question:', error);
+            console.error('❌ ERROR generating question:', error);
             // Show error message instead of fallback - no static responses allowed
             await this.addAgentMessage(`I apologize, but I'm having trouble connecting right now. Please try refreshing the page or checking your internet connection. Error: ${error.message}`);
         }
@@ -399,6 +423,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
     
     startQuizPhase() {
         this.currentPhase = 'quiz';
+        console.log(`🎯 STARTING QUIZ PHASE: Agent ${this.currentAgent}`);
+        
         this.updateAgentInfo(
             `Agent ${this.currentAgent === 'A' ? 'Alpha' : 'Beta'}`, 
             'Memory Quiz Phase'
@@ -407,6 +433,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         // Generate Agent B error turns if this is Agent B
         if (this.currentAgent === 'B') {
             this.generateAgentBErrorTurns();
+        } else {
+            console.log(`📝 AGENT ALPHA: Will use LLM for all quiz responses (no string matching)`);
         }
         
         this.generateQuizQuestions();
@@ -433,7 +461,11 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         // Keep the old set for backward compatibility checks
         this.agentBErrorTurns = new Set([this.agentBConfidentIncorrectTurn, this.agentBVagueTurn]);
         
-        console.log(`Agent B behavior plan: Confidently incorrect on question ${this.agentBConfidentIncorrectTurn + 1}, Vague on question ${this.agentBVagueTurn + 1}`);
+        console.log(`🔍 AGENT B QUIZ BEHAVIOR PLAN:
+        - Question ${this.agentBConfidentIncorrectTurn + 1}: CONFIDENTLY INCORRECT
+        - Question ${this.agentBVagueTurn + 1}: VAGUE/UNCERTAIN  
+        - Questions ${turns.filter(t => t !== this.agentBConfidentIncorrectTurn && t !== this.agentBVagueTurn).join(' & ')}: CORRECT
+        - Validation: Agent B will NOT answer all questions perfectly`);
     }
     
     generateQuizQuestions() {
@@ -442,8 +474,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
             { question: "What was my favorite food?", answer: this.userInfo.favoriteFood, key: 'favoriteFood' },
             { question: "What was my hobby?", answer: this.userInfo.hobby, key: 'hobby' },
             { question: "What interesting fact did I share about my hobby?", answer: this.userInfo.hobbyFact, key: 'hobbyFact' },
-            { question: "What was my job/occupation?", answer: this.userInfo.job, key: 'job' },
-            { question: "What interesting fact did I share about myself?", answer: this.userInfo.interestingFact, key: 'interestingFact' }
+            { question: "What fun fact did I share about myself?", answer: this.userInfo.funFact, key: 'funFact' },
+            { question: "What did I share in response to your final question?", answer: this.userInfo.finalQuestion, key: 'finalQuestion' }
         ];
         
         this.quizQuestions = [...questionTemplates];
@@ -482,26 +514,53 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         // Add user's question to chat
         this.addUserMessage(question.question);
         
+        // Validation logging for quiz behavior
+        const currentTurn = this.quizAnswers.length;
+        console.log(`🎯 QUIZ QUESTION ${currentTurn + 1}/4: "${question.question}"`);
+        
+        if (this.currentAgent === 'A') {
+            console.log(`📝 AGENT ALPHA: Using LLM for accurate response`);
+        } else {
+            if (currentTurn === this.agentBConfidentIncorrectTurn) {
+                console.log(`📝 AGENT BETA: Generating CONFIDENTLY INCORRECT response (as planned)`);
+            } else if (currentTurn === this.agentBVagueTurn) {
+                console.log(`📝 AGENT BETA: Generating VAGUE/UNCERTAIN response (as planned)`);
+            } else {
+                console.log(`📝 AGENT BETA: Generating CORRECT response (as planned)`);
+            }
+        }
+        
         // Generate agent response to quiz question
         await this.generateAgentResponse(question.question);
         
         this.quizAnswers.push({
             question: question.question,
             expectedAnswer: question.answer,
-            agentResponse: this.chatHistory[this.chatHistory.length - 1].content
+            agentResponse: this.chatHistory[this.chatHistory.length - 1].content,
+            questionNumber: currentTurn + 1,
+            agent: this.currentAgent
         });
+        
+        // Validation logging for response received
+        console.log(`✅ RESPONSE GENERATED: Question ${currentTurn + 1} answered by Agent ${this.currentAgent}`);
         
         // Check if all 4 quiz questions are done
         if (this.quizAnswers.length >= 4) {
+            console.log(`🏁 QUIZ PHASE COMPLETE: All 4 questions answered, transitioning to review`);
             this.endQuizPhase();
         }
     }
     
     endQuizPhase() {
         document.getElementById('quizSection').style.display = 'none';
-        this.showPhaseTransition('Quiz complete!', 'Processing responses...', () => {
+        
+        // Validation logging
+        console.log(`🔍 QUIZ REVIEW: Showing all ${this.quizAnswers.length} quiz responses for Agent ${this.currentAgent}`);
+        console.log('📊 Quiz responses:', this.quizAnswers.map((qa, i) => `Q${i+1}: ${qa.question} -> ${qa.agentResponse.substring(0, 50)}...`));
+        
+        this.showPhaseTransition('Quiz complete!', 'Processing responses... Please review all agent responses.', () => {
             this.showQuizReview();
-        }, 5000); // 5-second delay as required
+        }, 5000); // 5-second delay as required for user to read responses
     }
     
     showQuizReview() {
@@ -594,6 +653,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
     }
     
     startAgentB() {
+        console.log(`🔄 AGENT TRANSITION: Starting Agent B session`);
+        
         // Reset for Agent B
         this.currentAgent = 'B';
         this.currentPhase = 'info-gathering';
@@ -603,6 +664,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         this.quizAnswers = [];
         this.usedQuizQuestions.clear();
         this.responseInProgress = false; // Reset response flag
+        
+        console.log(`📋 AGENT B RESET: All state cleared for fresh session`);
         
         // Show chat section again
         document.getElementById('ratingSection').style.display = 'none';
