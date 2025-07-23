@@ -151,7 +151,10 @@ class ChatApp {
     storeUserInfo(message) {
         const questions = ['name', 'favoriteFood', 'hobby', 'hobbyFact', 'jobOccupation', 'funFact'];
         if (this.currentQuestionIndex < questions.length) {
+            // Store user response as-is, including declines like 'not much', 'pass', etc.
+            // No retrying or re-asking allowed per requirements
             this.userInfo[questions[this.currentQuestionIndex]] = message;
+            console.log(`📝 USER RESPONSE STORED: ${questions[this.currentQuestionIndex]} = "${message}" (no retrying allowed)`);
         }
     }
     

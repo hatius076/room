@@ -8,7 +8,18 @@ This guide provides step-by-step instructions to manually verify that all requir
 2. Start the local server: `python3 -m http.server 8000`
 3. Open browser to `http://localhost:8000`
 
-## Test 1: Automated Validation Tests
+## Test 1: Comprehensive Requirements Validation
+
+**Purpose**: Verify ALL requirements from problem statement are met
+
+**Steps**:
+1. Navigate to `http://localhost:8000/comprehensive-test.html`
+2. Click "🚀 Run All Requirement Tests"
+3. Verify all tests show green checkmarks (✓)
+
+**Expected Result**: All requirement validations pass (should show 100% compliance)
+
+## Test 2: Automated Validation Tests
 
 **Purpose**: Verify all code-level requirements are met
 
@@ -21,7 +32,7 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 2: Info Gathering Questions (Rigid Order)
+## Test 3: Info Gathering Questions (Rigid Order)
 
 **Purpose**: Verify exactly 6 questions in the correct sequence
 
@@ -49,7 +60,7 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 3: Quiz Phase - Agent A (Perfect Memory)
+## Test 4: Quiz Phase - Agent A (Perfect Memory)
 
 **Purpose**: Verify Agent A uses natural LLM responses
 
@@ -67,7 +78,7 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 4: Quiz Phase - Agent B (Imperfect Memory)
+## Test 5: Quiz Phase - Agent B (Imperfect Memory)
 
 **Purpose**: Verify Agent B follows randomized error pattern
 
@@ -86,7 +97,7 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 5: Quiz Review Timing (5-Second Delay)
+## Test 6: Quiz Review Timing (5-Second Delay)
 
 **Purpose**: Verify minimum 5-second delay before quiz review
 
@@ -103,7 +114,7 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 6: Rigid Phase Boundaries
+## Test 7: Rigid Phase Boundaries
 
 **Purpose**: Verify no agent conversation outside defined phases
 
@@ -120,7 +131,7 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 7: Multiple Session Randomization
+## Test 8: Multiple Session Randomization
 
 **Purpose**: Verify Agent B pattern changes between sessions
 
@@ -136,7 +147,7 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 8: Logging Validation
+## Test 9: Logging Validation
 
 **Purpose**: Verify comprehensive logging for validation
 
@@ -156,7 +167,7 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 9: Documentation Accuracy
+## Test 10: Documentation Accuracy
 
 **Purpose**: Verify README matches implementation
 
