@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive LLM Chat Application</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Interactive LLM Chat Application</h1>
+            <div class="progress-indicator">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Initializing...</div>
+            </div>
+        </header>
+
+        <main>
+            <!-- API Key Setup Section -->
+            <div class="section" id="apiKeySection">
+                <h2>Setup Required</h2>
+                <p>Please ensure your OpenAI API key is configured in script.js</p>
+                <button id="validateApiKey" class="btn btn-primary">Validate API Key</button>
+                <div id="apiKeyError" class="error-message" style="display: none;"></div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div class="section" id="chatSection" style="display: none;">
+                <div class="agent-info">
+                    <h2 id="currentAgent">Agent A - Perfect Memory</h2>
+                    <p id="currentPhase">Information Gathering Phase</p>
+                </div>
+                
+                <div class="chat-container" id="chatContainer">
+                    <!-- Chat messages will be dynamically added here -->
+                </div>
+
+                <div class="input-container">
+                    <input type="text" id="userInput" placeholder="Type your response..." disabled>
+                    <button id="sendButton" class="btn btn-primary" disabled>Send</button>
+                </div>
+
+                <!-- Multiple Choice Section for Quiz -->
+                <div class="quiz-section" id="quizSection" style="display: none;">
+                    <h3>Memory Quiz</h3>
+                    <p>Select a question to ask the agent:</p>
+                    <div class="quiz-buttons" id="quizButtons">
+                        <!-- Quiz buttons will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rating Section -->
+            <div class="section" id="ratingSection" style="display: none;">
+                <h2>Rate Your Experience</h2>
+                <p id="ratingAgentName">Rate Agent A</p>
+                
+                <div class="rating-questions">
+                    <div class="rating-item">
+                        <label>Was the agent humanlike?</label>
+                        <div class="likert-scale">
+                            <input type="radio" name="humanlike" value="1" id="humanlike1">
+                            <label for="humanlike1">1</label>
+                            <input type="radio" name="humanlike" value="2" id="humanlike2">
+                            <label for="humanlike2">2</label>
+                            <input type="radio" name="humanlike" value="3" id="humanlike3">
+                            <label for="humanlike3">3</label>
+                            <input type="radio" name="humanlike" value="4" id="humanlike4">
+                            <label for="humanlike4">4</label>
+                            <input type="radio" name="humanlike" value="5" id="humanlike5">
+                            <label for="humanlike5">5</label>
+                            <input type="radio" name="humanlike" value="6" id="humanlike6">
+                            <label for="humanlike6">6</label>
+                            <input type="radio" name="humanlike" value="7" id="humanlike7">
+                            <label for="humanlike7">7</label>
+                        </div>
+                    </div>
+
+                    <div class="rating-item">
+                        <label>Was the agent likeable?</label>
+                        <div class="likert-scale">
+                            <input type="radio" name="likeable" value="1" id="likeable1">
+                            <label for="likeable1">1</label>
+                            <input type="radio" name="likeable" value="2" id="likeable2">
+                            <label for="likeable2">2</label>
+                            <input type="radio" name="likeable" value="3" id="likeable3">
+                            <label for="likeable3">3</label>
+                            <input type="radio" name="likeable" value="4" id="likeable4">
+                            <label for="likeable4">4</label>
+                            <input type="radio" name="likeable" value="5" id="likeable5">
+                            <label for="likeable5">5</label>
+                            <input type="radio" name="likeable" value="6" id="likeable6">
+                            <label for="likeable6">6</label>
+                            <input type="radio" name="likeable" value="7" id="likeable7">
+                            <label for="likeable7">7</label>
+                        </div>
+                    </div>
+
+                    <div class="rating-item">
+                        <label>Was the agent competent?</label>
+                        <div class="likert-scale">
+                            <input type="radio" name="competent" value="1" id="competent1">
+                            <label for="competent1">1</label>
+                            <input type="radio" name="competent" value="2" id="competent2">
+                            <label for="competent2">2</label>
+                            <input type="radio" name="competent" value="3" id="competent3">
+                            <label for="competent3">3</label>
+                            <input type="radio" name="competent" value="4" id="competent4">
+                            <label for="competent4">4</label>
+                            <input type="radio" name="competent" value="5" id="competent5">
+                            <label for="competent5">5</label>
+                            <input type="radio" name="competent" value="6" id="competent6">
+                            <label for="competent6">6</label>
+                            <input type="radio" name="competent" value="7" id="competent7">
+                            <label for="competent7">7</label>
+                        </div>
+                    </div>
+
+                    <div class="rating-item">
+                        <label>Would you like to chat with the agent again?</label>
+                        <div class="likert-scale">
+                            <input type="radio" name="chatAgain" value="1" id="chatAgain1">
+                            <label for="chatAgain1">1</label>
+                            <input type="radio" name="chatAgain" value="2" id="chatAgain2">
+                            <label for="chatAgain2">2</label>
+                            <input type="radio" name="chatAgain" value="3" id="chatAgain3">
+                            <label for="chatAgain3">3</label>
+                            <input type="radio" name="chatAgain" value="4" id="chatAgain4">
+                            <label for="chatAgain4">4</label>
+                            <input type="radio" name="chatAgain" value="5" id="chatAgain5">
+                            <label for="chatAgain5">5</label>
+                            <input type="radio" name="chatAgain" value="6" id="chatAgain6">
+                            <label for="chatAgain6">6</label>
+                            <input type="radio" name="chatAgain" value="7" id="chatAgain7">
+                            <label for="chatAgain7">7</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="submitRating" class="btn btn-primary">Submit Rating</button>
+            </div>
+
+            <!-- Final Section -->
+            <div class="section" id="finalSection" style="display: none;">
+                <h2>Study Complete!</h2>
+                <p>Thank you for participating in this study. You can now download your rating data.</p>
+                <button id="downloadData" class="btn btn-success">Download Rating Data (JSON)</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
