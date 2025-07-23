@@ -1,6 +1,6 @@
 // OpenAI API Configuration
 // IMPORTANT: Replace 'your-openai-api-key-here' with your actual OpenAI API key
-const OPENAI_API_KEY = 'test-key-for-demo';
+const OPENAI_API_KEY = 'your-openai-api-key-here';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // Application state
@@ -82,13 +82,6 @@ class ChatApp {
             return;
         }
         
-        // For demo purposes, bypass validation if using test key
-        if (OPENAI_API_KEY === 'test-key-for-demo') {
-            this.hideError();
-            this.startApplication();
-            return;
-        }
-        
         try {
             const response = await fetch(OPENAI_API_URL, {
                 method: 'POST',
@@ -165,15 +158,6 @@ class ChatApp {
         this.responseInProgress = true;
         
         try {
-            // Demo mode for testing transitions
-            if (OPENAI_API_KEY === 'test-key-for-demo') {
-                await this.generateDemoResponse(userMessage);
-                this.handlePhaseProgression();
-                this.responseInProgress = false;
-                this.enableChatInput();
-                return;
-            }
-            
             let systemPrompt = this.getSystemPrompt();
             let messages = [
                 { role: 'system', content: systemPrompt },
@@ -214,42 +198,6 @@ class ChatApp {
         }
         
         this.enableChatInput();
-    }
-    
-    async generateDemoResponse(userMessage) {
-        // Demo responses for testing the transition functionality
-        let demoResponse = '';
-        
-        if (this.currentPhase === 'info-gathering') {
-            // Use the current question index to determine which question to ask next
-            const nextQuestionIndex = this.currentQuestionIndex + 1;
-            const responses = [
-                "Great to meet you, John! What's your favorite food?",
-                "Interesting choice! What's one of your hobbies?",
-                "That sounds fun! What's an interesting fact about that hobby?",
-                "That's fascinating! What's your job or occupation?",
-                "Thanks for sharing! What's an interesting fact about yourself?",
-                "Thank you for all that wonderful information!"
-            ];
-            demoResponse = responses[this.currentQuestionIndex] || "Thank you for all that information!";
-        } else if (this.currentPhase === 'quiz') {
-            if (this.currentAgent === 'A') {
-                demoResponse = "Based on what you told me, I remember that correctly.";
-            } else {
-                const currentTurn = this.quizAnswers.length;
-                if (currentTurn === this.agentBConfidentIncorrectTurn) {
-                    demoResponse = "I'm pretty sure it was something completely different.";
-                } else if (currentTurn === this.agentBVagueTurn) {
-                    demoResponse = "Hmm, I think it was... well, I'm not entirely sure.";
-                } else {
-                    demoResponse = "Yes, I remember that correctly.";
-                }
-            }
-        }
-        
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await this.addAgentMessage(demoResponse);
     }
     
     getSystemPrompt() {
@@ -401,22 +349,6 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
     }
     
     async generateNextQuestion() {
-        // Demo mode for testing
-        if (OPENAI_API_KEY === 'test-key-for-demo') {
-            const demoQuestions = [
-                "Hi there! Nice to meet you. What's your name?",
-                "Great to meet you! What's your favorite food?", 
-                "Interesting choice! What's one of your hobbies?",
-                "That sounds fun! What's an interesting fact about that hobby?",
-                "That's fascinating! What's your job or occupation?",
-                "Thanks for sharing! What's an interesting fact about yourself?"
-            ];
-            const message = demoQuestions[this.currentQuestionIndex] || "Thank you!";
-            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-            await this.addAgentMessage(message);
-            return;
-        }
-        
         try {
             let systemPrompt = this.getSystemPrompt();
             let messages = [
