@@ -86,42 +86,37 @@ This guide provides step-by-step instructions to manually verify that all requir
 
 ---
 
-## Test 5: Quiz Review Timing (Manual Transition)
+## Test 5: Quiz Review Timing (5-Second Delay)
 
-**Purpose**: Verify manual "Proceed" button after quiz phase
+**Purpose**: Verify minimum 5-second delay before quiz review
 
 **Steps**:
 1. Complete 4 quiz questions for any agent
-2. Verify quiz review appears immediately (no automatic delays)
-3. Check that "Proceed to Rating" button is present
-4. Verify user must manually click to proceed
+2. Time the transition modal duration
+3. Check console logs for timing enforcement
 
 **Expected Result**:
-- Console shows: `📋 MANUAL TRANSITION: Showing quiz review with manual "Proceed" button`
-- Console shows: `✅ NO AUTOMATIC TRANSITION: User must manually proceed to rating phase`
-- Quiz review displays immediately with manual proceed button
-- No automatic timers or delays
-- User must explicitly click "Proceed to Rating" to advance
+- Console shows: `⏱️ ENFORCING 5-SECOND MINIMUM DELAY before quiz review transition`
+- Transition modal displays for at least 5 seconds
+- User can read all responses before proceeding
+- Modal message mentions "5-second minimum delay enforced"
 
 ---
 
-## Test 6: Manual Phase Transitions
+## Test 6: Rigid Phase Boundaries
 
-**Purpose**: Verify manual "Proceed" buttons replace automatic transitions
+**Purpose**: Verify no agent conversation outside defined phases
 
 **Steps**:
-1. Complete 6 info questions and verify info summary appears
-2. Check that "Proceed to Quiz" button is required for advancement
-3. Complete 4 quiz questions and verify quiz review appears
-4. Check that "Proceed to Rating" button is required for advancement
+1. Try to continue conversation after question #6
+2. Verify quiz phase only allows question selection
+3. Confirm rating phase has no chat interface
 
 **Expected Result**:
-- Info summary displays all 6 responses with manual proceed button
-- No automatic progression after info gathering phase
-- Quiz review displays all responses with manual proceed button  
-- No automatic progression after quiz phase
-- Console logs confirm manual transitions: `🔄 MANUAL TRANSITION: User clicked "Proceed" button`
-- Console logs confirm user control: `✅ USER CONTROL ENFORCED: Manual progression`
+- No chat input available after info gathering completion
+- Clear non-agent UI transitions between phases
+- No LLM-generated conversation outside defined boundaries
+- Phase transitions are immediate and non-negotiable
 
 ---
 
