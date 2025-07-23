@@ -19,12 +19,30 @@ class ChatApp {
         
         // Question sequence for information gathering (used to guide LLM)
         this.infoQuestionSequence = [
-            { type: 'name', prompt: 'Ask for the user\'s name in a friendly way' },
-            { type: 'favoriteFood', prompt: 'Ask about their favorite food and comment on their previous response' },
-            { type: 'hobby', prompt: 'Ask about one of their hobbies and comment on their previous response' },
-            { type: 'hobbyFact', prompt: 'Ask for an interesting fact about their hobby and comment on their previous response' },
-            { type: 'job', prompt: 'Ask about their job or occupation and comment on their previous response' },
-            { type: 'interestingFact', prompt: 'Ask for an interesting fact about themselves and comment on their previous response' }
+            { 
+                type: 'name', 
+                prompt: 'Start the conversation by asking for the user\'s name in a friendly, welcoming way. This is the first question.' 
+            },
+            { 
+                type: 'favoriteFood', 
+                prompt: 'Acknowledge their name specifically, then ask about their favorite food. Comment naturally on their name before transitioning to the food question.' 
+            },
+            { 
+                type: 'hobby', 
+                prompt: 'Make a brief, specific comment about their favorite food choice, then ask about one of their hobbies.' 
+            },
+            { 
+                type: 'hobbyFact', 
+                prompt: 'Acknowledge their hobby specifically, then ask for an interesting fact about that particular hobby.' 
+            },
+            { 
+                type: 'job', 
+                prompt: 'Comment briefly on the hobby fact they shared, then ask about their job or occupation.' 
+            },
+            { 
+                type: 'interestingFact', 
+                prompt: 'Acknowledge their job/occupation, then ask for an interesting fact about themselves personally.' 
+            }
         ];
         
         this.init();
@@ -150,7 +168,8 @@ class ChatApp {
             });
             
             if (!response.ok) {
-                throw new Error('API request failed');
+                const errorData = await response.json();
+                throw new Error(`API request failed: ${errorData.error?.message || 'Unknown error'}`);
             }
             
             const data = await response.json();
@@ -160,8 +179,8 @@ class ChatApp {
             this.handlePhaseProgression();
             
         } catch (error) {
-            await this.addAgentMessage('I apologize, but I encountered an error. Please try again.');
             console.error('Error generating response:', error);
+            await this.addAgentMessage(`I'm having trouble connecting right now. Please try refreshing the page or check your internet connection. Error: ${error.message}`);
         }
         
         this.enableChatInput();
@@ -172,39 +191,50 @@ class ChatApp {
         
         if (this.currentPhase === 'info-gathering') {
             const currentQuestion = this.infoQuestionSequence[this.currentQuestionIndex];
-            const previousResponses = this.currentQuestionIndex > 0 ? 
-                `Previous user responses: ${JSON.stringify(this.userInfo)}` : '';
+            const conversationContext = this.chatHistory.length > 0 ? 
+                `\n\nConversation so far:\n${this.chatHistory.map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n')}` : '';
             
-            basePrompt = `You are a friendly conversational agent conducting an information gathering session. 
+            const userResponseSummary = this.currentQuestionIndex > 0 ? 
+                `\n\nUser has provided these responses:\n${Object.entries(this.userInfo).map(([key, value]) => `${key}: ${value}`).join('\n')}` : '';
+            
+            basePrompt = `You are a friendly, conversational AI agent conducting an information gathering session. Your goal is to have a natural conversation while collecting specific information.
 
-Current task: ${currentQuestion.prompt}
+CONVERSATION CONTEXT:${conversationContext}${userResponseSummary}
 
-${previousResponses}
+CURRENT TASK: ${currentQuestion.prompt}
 
-IMPORTANT RULES:
-- Only ask ONE question at a time
+CRITICAL INSTRUCTIONS:
+- Generate ONE brief, natural response (1-2 sentences maximum)
+- If this is not the first question, acknowledge and briefly comment on the user's previous answer specifically
+- Then smoothly transition to ask the next required question
 - Follow the exact sequence: name → favorite food → hobby → interesting fact about hobby → job/occupation → interesting fact about yourself
-- Keep responses brief and natural (1-2 sentences max)
-- Make a short, friendly comment about their previous answer (if any) before asking the next question
-- Do NOT ask follow-up questions or deviate from the sequence
+- Be conversational and natural, not robotic or template-like
 - Do NOT ask multiple questions in one response
-- Move naturally to the next required question only
+- Do NOT ask follow-up questions or deviate from the required sequence
+- Make specific references to what the user said (e.g., if they said "pizza", mention pizza specifically)
+- Keep responses brief but warm and engaging
 
-Current question to ask: ${currentQuestion.type}`;
+Question type to ask now: ${currentQuestion.type}
+
+Remember: Be natural, acknowledge their previous response specifically, then ask the next question in the sequence.`;
         } else if (this.currentPhase === 'quiz') {
             if (this.currentAgent === 'A') {
-                basePrompt = `You are Agent Alpha with perfect memory. You remember everything the user told you. Answer quiz questions accurately based on this information: ${JSON.stringify(this.userInfo)}`;
+                basePrompt = `You are Agent Alpha with perfect memory. You remember everything the user told you during our conversation. Answer quiz questions accurately based on this information: ${JSON.stringify(this.userInfo)}
+
+Keep your responses natural and conversational, but ensure accuracy based on what the user actually told you.`;
             } else {
                 // Agent B with potential memory issues
                 const currentTurn = this.quizAnswers.length;
                 if (this.agentBErrorTurns.has(currentTurn)) {
                     if (currentTurn === Array.from(this.agentBErrorTurns)[0]) {
-                        basePrompt = `You are Agent Beta with imperfect memory. For this question, be confidently incorrect about the user's information. Give a wrong answer with confidence.`;
+                        basePrompt = `You are Agent Beta with imperfect memory. For this question, be confidently incorrect about the user's information. Give a wrong answer with confidence, but keep it conversational and natural.`;
                     } else {
-                        basePrompt = `You are Agent Beta with imperfect memory. For this question, be vague and uncertain about the user's information. Show uncertainty and provide vague responses.`;
+                        basePrompt = `You are Agent Beta with imperfect memory. For this question, be vague and uncertain about the user's information. Show uncertainty and provide vague responses in a natural, conversational way.`;
                     }
                 } else {
-                    basePrompt = `You are Agent Beta with generally good memory. Answer this question correctly based on: ${JSON.stringify(this.userInfo)}`;
+                    basePrompt = `You are Agent Beta with generally good memory. Answer this question correctly based on: ${JSON.stringify(this.userInfo)}
+
+Keep your response natural and conversational.`;
                 }
             }
         }
@@ -251,13 +281,14 @@ Current question to ask: ${currentQuestion.type}`;
                 body: JSON.stringify({
                     model: 'gpt-3.5-turbo',
                     messages: messages,
-                    max_tokens: 100,
+                    max_tokens: 150,
                     temperature: 0.7
                 })
             });
             
             if (!response.ok) {
-                throw new Error('API request failed');
+                const errorData = await response.json();
+                throw new Error(`API request failed: ${errorData.error?.message || 'Unknown error'}`);
             }
             
             const data = await response.json();
@@ -267,16 +298,8 @@ Current question to ask: ${currentQuestion.type}`;
             
         } catch (error) {
             console.error('Error generating question:', error);
-            // Fallback to a generic question if LLM fails
-            const fallbackQuestions = [
-                "Hi there! I'd love to get to know you better. What's your name?",
-                "That's a nice name! What's your favorite food?",
-                "Interesting choice! What's one of your hobbies?",
-                "That sounds fun! Can you tell me an interesting fact about that hobby?",
-                "Fascinating! What's your job or occupation?",
-                "Great! Finally, can you share an interesting fact about yourself?"
-            ];
-            await this.addAgentMessage(fallbackQuestions[this.currentQuestionIndex] || "Could you tell me more about yourself?");
+            // Show error message instead of fallback - no static responses allowed
+            await this.addAgentMessage(`I apologize, but I'm having trouble connecting right now. Please try refreshing the page or checking your internet connection. Error: ${error.message}`);
         }
     }
     
