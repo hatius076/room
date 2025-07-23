@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Transitions Demo - Room App</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .demo-controls {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #28a745;
+        }
+        .demo-step {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .demo-note {
+            color: #6c757d;
+            font-style: italic;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Manual Transitions Demo</h1>
+            <div class="progress-indicator">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Demo: Manual transitions with Proceed buttons</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="demo-controls">
+                <h2>🎯 Demo: Manual Phase Transitions</h2>
+                <p>This demo shows the manual "Proceed" button transitions implemented according to the requirements.</p>
+                
+                <div class="demo-step">
+                    <strong>Step 1:</strong> Click "Simulate Info Phase" to see the info summary with manual proceed button
+                    <div class="demo-note">Simulates completion of 6 info questions → manual transition required</div>
+                    <button id="simulateInfo" class="btn btn-primary" style="margin-top: 10px;">Simulate Info Phase Complete</button>
+                </div>
+                
+                <div class="demo-step">
+                    <strong>Step 2:</strong> In the info summary, click "Proceed to Quiz" to manually advance
+                    <div class="demo-note">No automatic progression - user must click to proceed</div>
+                </div>
+                
+                <div class="demo-step">
+                    <strong>Step 3:</strong> Click "Simulate Quiz Phase" to see quiz review with manual proceed button
+                    <div class="demo-note">Simulates completion of 4 quiz questions → manual transition required</div>
+                    <button id="simulateQuiz" class="btn btn-primary" style="margin-top: 10px;">Simulate Quiz Phase Complete</button>
+                </div>
+                
+                <div class="demo-step">
+                    <strong>Step 4:</strong> In the quiz review, click "Proceed to Rating" to manually advance
+                    <div class="demo-note">No automatic timing delays - immediate manual control</div>
+                </div>
+            </div>
+
+            <!-- Info Summary Section (Manual Transition) -->
+            <div class="section" id="infoSummarySection" style="display: none;">
+                <h2>Information Summary</h2>
+                <p>You have answered all 6 questions. Please review your responses:</p>
+                <div class="info-summary-container" id="infoSummaryContainer">
+                    <!-- Mock info summary content -->
+                    <div class="info-summary-item">
+                        <div class="info-summary-label">1. Name:</div>
+                        <div class="info-summary-value">John Doe (demo)</div>
+                    </div>
+                    <div class="info-summary-item">
+                        <div class="info-summary-label">2. Favorite Food:</div>
+                        <div class="info-summary-value">Pizza (demo)</div>
+                    </div>
+                    <div class="info-summary-item">
+                        <div class="info-summary-label">3. Hobby:</div>
+                        <div class="info-summary-value">Reading (demo)</div>
+                    </div>
+                    <div class="info-summary-item">
+                        <div class="info-summary-label">4. Fact about Hobby:</div>
+                        <div class="info-summary-value">I read about 50 books per year (demo)</div>
+                    </div>
+                    <div class="info-summary-item">
+                        <div class="info-summary-label">5. Job/Occupation:</div>
+                        <div class="info-summary-value">Software Developer (demo)</div>
+                    </div>
+                    <div class="info-summary-item">
+                        <div class="info-summary-label">6. Fun Fact about You:</div>
+                        <div class="info-summary-value">I can juggle three balls (demo)</div>
+                    </div>
+                </div>
+                <button id="proceedToQuiz" class="btn btn-primary">Proceed to Quiz</button>
+                <p style="margin-top: 15px; color: #28a745; font-weight: bold;">
+                    ✅ MANUAL TRANSITION: User must click "Proceed to Quiz" - NO automatic progression!
+                </p>
+            </div>
+
+            <!-- Quiz Review Section -->
+            <div class="section" id="quizReviewSection" style="display: none;">
+                <h2>Quiz Responses Review</h2>
+                <p id="reviewAgentName">Review Agent Alpha's Responses (Demo)</p>
+                <div class="quiz-review-container" id="quizReviewContainer">
+                    <!-- Mock quiz review content -->
+                    <div class="quiz-review-item">
+                        <div class="quiz-review-question">Q1: What was my name?</div>
+                        <div class="quiz-review-response">Your name is John Doe. It's nice to meet you! (demo response)</div>
+                    </div>
+                    <div class="quiz-review-item">
+                        <div class="quiz-review-question">Q2: What was my favorite food?</div>
+                        <div class="quiz-review-response">You mentioned that pizza is your favorite food. That's a popular choice! (demo response)</div>
+                    </div>
+                    <div class="quiz-review-item">
+                        <div class="quiz-review-question">Q3: What was my hobby?</div>
+                        <div class="quiz-review-response">Reading is your hobby, and you really enjoy it. (demo response)</div>
+                    </div>
+                    <div class="quiz-review-item">
+                        <div class="quiz-review-question">Q4: What is my job?</div>
+                        <div class="quiz-review-response">You work as a software developer, which is a great profession! (demo response)</div>
+                    </div>
+                </div>
+                <button id="proceedToRating" class="btn btn-primary">Proceed to Rating</button>
+                <p style="margin-top: 15px; color: #28a745; font-weight: bold;">
+                    ✅ MANUAL TRANSITION: User must click "Proceed to Rating" - NO automatic timing delays!
+                </p>
+            </div>
+
+            <!-- Success Message -->
+            <div class="section" id="successSection" style="display: none;">
+                <h2>✅ Manual Transitions Demonstrated Successfully!</h2>
+                <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <h3>Requirements Met:</h3>
+                    <ul>
+                        <li>✅ <strong>Manual "Proceed" buttons</strong> after info gathering (no automatic progression)</li>
+                        <li>✅ <strong>Manual "Proceed" buttons</strong> after quiz phase (no automatic timing delays)</li>
+                        <li>✅ <strong>Info summary display</strong> showing all 6 responses before quiz transition</li>
+                        <li>✅ <strong>Quiz review display</strong> showing all responses before rating transition</li>
+                        <li>✅ <strong>User control enforced</strong> - no automatic phase advances</li>
+                        <li>✅ <strong>Rigid boundaries</strong> - no soft endings or ambiguous transitions</li>
+                    </ul>
+                </div>
+                <button onclick="location.reload()" class="btn btn-success">Reset Demo</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Demo controls
+        document.getElementById('simulateInfo').addEventListener('click', function() {
+            document.getElementById('infoSummarySection').style.display = 'block';
+            this.style.display = 'none';
+            console.log('🎯 DEMO: Info phase complete - showing manual transition UI');
+        });
+
+        document.getElementById('proceedToQuiz').addEventListener('click', function() {
+            document.getElementById('infoSummarySection').style.display = 'none';
+            document.getElementById('simulateQuiz').style.display = 'inline-block';
+            console.log('🔄 DEMO: Manual transition from info to quiz - user clicked Proceed button');
+        });
+
+        document.getElementById('simulateQuiz').addEventListener('click', function() {
+            document.getElementById('quizReviewSection').style.display = 'block';
+            this.style.display = 'none';
+            console.log('🎯 DEMO: Quiz phase complete - showing manual transition UI');
+        });
+
+        document.getElementById('proceedToRating').addEventListener('click', function() {
+            document.getElementById('quizReviewSection').style.display = 'none';
+            document.getElementById('successSection').style.display = 'block';
+            console.log('🔄 DEMO: Manual transition from quiz to rating - user clicked Proceed button');
+        });
+
+        // Initialize progress
+        document.getElementById('progressFill').style.width = '100%';
+    </script>
+</body>
+</html>

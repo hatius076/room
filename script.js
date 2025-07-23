@@ -70,6 +70,9 @@ class ChatApp {
         // Rating submission
         document.getElementById('submitRating').addEventListener('click', () => this.submitRating());
         
+        // Info summary proceed button (manual transition)
+        document.getElementById('proceedToQuiz').addEventListener('click', () => this.proceedFromInfoToQuiz());
+        
         // Quiz review proceed button
         document.getElementById('proceedToRating').addEventListener('click', () => this.proceedFromReviewToRating());
         
@@ -344,11 +347,9 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
             
             if (this.currentQuestionIndex >= 6) {
                 console.log('🚫 INFO GATHERING BOUNDARY ENFORCED: 6 questions completed, NO additional questions allowed');
-                console.log('📋 RIGID PHASE TRANSITION: Moving to quiz phase with UI transition (non-agent)');
-                // Move to quiz phase with transition modal - RIGID BOUNDARY
-                this.showPhaseTransition('Information gathering complete!', 'Preparing memory quiz... (No further conversation allowed)', () => {
-                    this.startQuizPhase();
-                });
+                console.log('📋 MANUAL PHASE TRANSITION: Showing info summary with manual "Proceed" button');
+                // Show info summary with manual transition button - RIGID BOUNDARY
+                this.showInfoSummary();
                 return;
             }
             
@@ -364,10 +365,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
                 }
             } else {
                 // Backup safety check - should never reach here due to above validation
-                console.log('⚠️ BACKUP SAFETY: Moving to quiz phase (boundary enforcement)');
-                this.showPhaseTransition('Information gathering complete!', 'Preparing memory quiz...', () => {
-                    this.startQuizPhase();
-                });
+                console.log('⚠️ BACKUP SAFETY: Showing info summary (boundary enforcement)');
+                this.showInfoSummary();
             }
         } else if (this.currentPhase === 'quiz') {
             // Quiz responses are handled differently
@@ -424,6 +423,65 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         if (this.currentQuestionIndex < this.infoQuestionSequence.length) {
             await this.generateNextQuestion();
         }
+    }
+    
+    showInfoSummary() {
+        // Hide chat section and show info summary
+        document.getElementById('chatSection').style.display = 'none';
+        document.getElementById('infoSummarySection').style.display = 'block';
+        
+        this.currentPhase = 'info-summary';
+        this.updateProgress(20, 'Review your information and proceed to quiz');
+        
+        // Populate the info summary
+        this.populateInfoSummary();
+        
+        console.log('📋 INFO SUMMARY DISPLAYED: User must manually click "Proceed to Quiz" button');
+        console.log('✅ NO AUTOMATIC TRANSITION: Enforcing manual user control');
+    }
+    
+    populateInfoSummary() {
+        const container = document.getElementById('infoSummaryContainer');
+        container.innerHTML = '';
+        
+        const questionLabels = [
+            'Name',
+            'Favorite Food', 
+            'Hobby',
+            'Fact about Hobby',
+            'Job/Occupation',
+            'Fun Fact about You'
+        ];
+        
+        const questionKeys = ['name', 'favoriteFood', 'hobby', 'hobbyFact', 'jobOccupation', 'funFact'];
+        
+        questionKeys.forEach((key, index) => {
+            const summaryItem = document.createElement('div');
+            summaryItem.className = 'info-summary-item';
+            
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'info-summary-label';
+            labelDiv.textContent = `${index + 1}. ${questionLabels[index]}:`;
+            
+            const valueDiv = document.createElement('div');
+            valueDiv.className = 'info-summary-value';
+            valueDiv.textContent = this.userInfo[key] || 'No response provided';
+            
+            summaryItem.appendChild(labelDiv);
+            summaryItem.appendChild(valueDiv);
+            container.appendChild(summaryItem);
+        });
+        
+        console.log('📊 INFO SUMMARY POPULATED: All 6 responses displayed for user review');
+    }
+    
+    proceedFromInfoToQuiz() {
+        console.log('🔄 MANUAL TRANSITION: User clicked "Proceed to Quiz" button');
+        console.log('✅ USER CONTROL ENFORCED: Manual progression from info to quiz phase');
+        
+        // Hide info summary and start quiz phase
+        document.getElementById('infoSummarySection').style.display = 'none';
+        this.startQuizPhase();
     }
     
     startQuizPhase() {
@@ -589,12 +647,11 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         // Validation logging
         console.log(`🔍 QUIZ REVIEW: Showing all ${this.quizAnswers.length} quiz responses for Agent ${this.currentAgent}`);
         console.log('📊 Quiz responses:', this.quizAnswers.map((qa, i) => `Q${i+1}: ${qa.question} -> ${qa.agentResponse.substring(0, 50)}...`));
-        console.log('⏱️ ENFORCING 5-SECOND MINIMUM DELAY before quiz review transition');
+        console.log('📋 MANUAL TRANSITION: Showing quiz review with manual "Proceed" button');
+        console.log('✅ NO AUTOMATIC TRANSITION: User must manually proceed to rating phase');
         
-        // REQUIREMENT: 5-second minimum delay before showing transition
-        this.showPhaseTransition('Quiz complete!', 'Processing responses... Please review all agent responses (5-second minimum delay enforced)', () => {
-            this.showQuizReview();
-        }, 5000); // Exactly 5-second delay as required
+        // Show quiz review immediately with manual transition
+        this.showQuizReview();
     }
     
     showQuizReview() {
@@ -633,6 +690,9 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
     }
     
     proceedFromReviewToRating() {
+        console.log('🔄 MANUAL TRANSITION: User clicked "Proceed to Rating" button');
+        console.log('✅ USER CONTROL ENFORCED: Manual progression from quiz review to rating phase');
+        
         document.getElementById('quizReviewSection').style.display = 'none';
         this.startRatingPhase();
     }
