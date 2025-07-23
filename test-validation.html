@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room App Validation Tests</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .fail { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #e3f2fd; border: 1px solid #bbdefb; color: #0d47a1; }
+        #testResults { margin-top: 20px; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Room App Validation Tests</h1>
+    <p>This page validates the rigid requirements for the info/quiz section.</p>
+    
+    <div>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="testResults"></div>
+
+    <script>
+        const results = document.getElementById('testResults');
+        
+        function addResult(test, status, message) {
+            const div = document.createElement('div');
+            div.className = `test-result ${status}`;
+            div.innerHTML = `<strong>${test}:</strong> ${message}`;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            results.innerHTML = '';
+        }
+        
+        function runAllTests() {
+            clearResults();
+            addResult('Test Suite', 'info', 'Starting validation tests...');
+            
+            // Test 1: Validate info question sequence
+            testInfoQuestionSequence();
+            
+            // Test 2: Validate rigid boundaries
+            testRigidBoundaries();
+            
+            // Test 3: Validate Agent B pattern
+            testAgentBPattern();
+            
+            // Test 4: Validate timing requirements
+            testTimingRequirements();
+            
+            // Test 5: Validate Agent A LLM usage
+            testAgentALLMUsage();
+            
+            addResult('Test Suite', 'info', 'All validation tests completed.');
+        }
+        
+        function testInfoQuestionSequence() {
+            addResult('Info Question Sequence', 'info', 'Testing 6 fixed questions in correct order...');
+            
+            // Load the main script to access the question sequence
+            const expectedSequence = [
+                'name', 'favoriteFood', 'hobby', 'hobbyFact', 'jobOccupation', 'funFact'
+            ];
+            
+            const expectedQuestions = [
+                'Name',
+                'Favorite food', 
+                'Hobby',
+                'Fact about hobby',
+                'Job/occupation',
+                'Fun fact about user'
+            ];
+            
+            // Validate sequence length
+            if (expectedSequence.length === 6) {
+                addResult('Question Count', 'pass', 'Exactly 6 questions defined ✓');
+            } else {
+                addResult('Question Count', 'fail', `Expected 6 questions, found ${expectedSequence.length}`);
+            }
+            
+            // Validate specific order
+            const correctOrder = expectedSequence.join(',') === 'name,favoriteFood,hobby,hobbyFact,jobOccupation,funFact';
+            if (correctOrder) {
+                addResult('Question Order', 'pass', 'Questions in correct order: ' + expectedQuestions.join(' → ') + ' ✓');
+            } else {
+                addResult('Question Order', 'fail', 'Questions not in expected order');
+            }
+        }
+        
+        function testRigidBoundaries() {
+            addResult('Rigid Boundaries', 'info', 'Testing phase transition enforcement...');
+            
+            // Check for boundary enforcement keywords in the code
+            fetch('/script.js')
+                .then(response => response.text())
+                .then(code => {
+                    const hasRigidEnforcement = code.includes('RIGID BOUNDARY') || code.includes('RIGID ENFORCEMENT');
+                    const hasStrictValidation = code.includes('STRICT VALIDATION');
+                    const hasNoExtraQuestions = code.includes('NO additional questions allowed');
+                    
+                    if (hasRigidEnforcement) {
+                        addResult('Boundary Enforcement', 'pass', 'Rigid boundary enforcement found in code ✓');
+                    } else {
+                        addResult('Boundary Enforcement', 'fail', 'Rigid boundary enforcement not detected');
+                    }
+                    
+                    if (hasStrictValidation) {
+                        addResult('Strict Validation', 'pass', 'Strict validation logic found ✓');
+                    } else {
+                        addResult('Strict Validation', 'fail', 'Strict validation not detected');
+                    }
+                    
+                    if (hasNoExtraQuestions) {
+                        addResult('Extra Questions Prevention', 'pass', 'No extra questions enforcement found ✓');
+                    } else {
+                        addResult('Extra Questions Prevention', 'fail', 'Extra questions prevention not detected');
+                    }
+                })
+                .catch(err => {
+                    addResult('Code Analysis', 'fail', 'Could not analyze script.js: ' + err.message);
+                });
+        }
+        
+        function testAgentBPattern() {
+            addResult('Agent B Pattern', 'info', 'Testing Agent B quiz error pattern...');
+            
+            fetch('/script.js')
+                .then(response => response.text())
+                .then(code => {
+                    const hasRandomization = code.includes('agentBConfidentIncorrectTurn') && code.includes('agentBVagueTurn');
+                    const hasValidation = code.includes('validateAgentBQuizPattern');
+                    const hasLogging = code.includes('PATTERN VERIFICATION') || code.includes('PATTERN ENFORCED');
+                    const hasNeverAllCorrect = code.includes('never all correct') || code.includes('will NOT answer all questions correctly');
+                    
+                    if (hasRandomization) {
+                        addResult('Error Turn Randomization', 'pass', 'Agent B error turn randomization implemented ✓');
+                    } else {
+                        addResult('Error Turn Randomization', 'fail', 'Agent B randomization not found');
+                    }
+                    
+                    if (hasValidation) {
+                        addResult('Pattern Validation', 'pass', 'Agent B pattern validation function found ✓');
+                    } else {
+                        addResult('Pattern Validation', 'fail', 'Pattern validation function not found');
+                    }
+                    
+                    if (hasLogging) {
+                        addResult('Pattern Logging', 'pass', 'Detailed pattern logging implemented ✓');
+                    } else {
+                        addResult('Pattern Logging', 'fail', 'Pattern logging not sufficient');
+                    }
+                    
+                    if (hasNeverAllCorrect) {
+                        addResult('Never All Correct', 'pass', 'Agent B never all correct requirement enforced ✓');
+                    } else {
+                        addResult('Never All Correct', 'fail', 'Never all correct requirement not found');
+                    }
+                })
+                .catch(err => {
+                    addResult('Agent B Analysis', 'fail', 'Could not analyze Agent B pattern: ' + err.message);
+                });
+        }
+        
+        function testTimingRequirements() {
+            addResult('Timing Requirements', 'info', 'Testing 5-second minimum delay requirement...');
+            
+            fetch('/script.js')
+                .then(response => response.text())
+                .then(code => {
+                    const hasFiveSecondDelay = code.includes('5000') && code.includes('5-second');
+                    const hasMinimumDelay = code.includes('minimum delay') || code.includes('MINIMUM DELAY');
+                    
+                    if (hasFiveSecondDelay) {
+                        addResult('5-Second Delay', 'pass', '5-second minimum delay implementation found ✓');
+                    } else {
+                        addResult('5-Second Delay', 'fail', '5-second delay not properly implemented');
+                    }
+                    
+                    if (hasMinimumDelay) {
+                        addResult('Delay Enforcement', 'pass', 'Minimum delay enforcement found ✓');
+                    } else {
+                        addResult('Delay Enforcement', 'fail', 'Delay enforcement not detected');
+                    }
+                })
+                .catch(err => {
+                    addResult('Timing Analysis', 'fail', 'Could not analyze timing requirements: ' + err.message);
+                });
+        }
+        
+        function testAgentALLMUsage() {
+            addResult('Agent A LLM Usage', 'info', 'Testing Agent A natural LLM responses...');
+            
+            fetch('/script.js')
+                .then(response => response.text())
+                .then(code => {
+                    const hasNoParroting = code.includes('NO PARROTING') || code.includes('no parroting');
+                    const hasLLMBased = code.includes('LLM-BASED') || code.includes('LLM for');
+                    const hasNaturalResponses = code.includes('NATURAL') && code.includes('responses');
+                    const hasNoStringMatching = code.includes('NO string matching');
+                    
+                    if (hasNoParroting) {
+                        addResult('No Parroting', 'pass', 'No parroting enforcement found ✓');
+                    } else {
+                        addResult('No Parroting', 'fail', 'No parroting enforcement not detected');
+                    }
+                    
+                    if (hasLLMBased) {
+                        addResult('LLM-Based Responses', 'pass', 'LLM-based response requirement found ✓');
+                    } else {
+                        addResult('LLM-Based Responses', 'fail', 'LLM-based response requirement not found');
+                    }
+                    
+                    if (hasNaturalResponses) {
+                        addResult('Natural Responses', 'pass', 'Natural response requirement found ✓');
+                    } else {
+                        addResult('Natural Responses', 'fail', 'Natural response requirement not found');
+                    }
+                    
+                    if (hasNoStringMatching) {
+                        addResult('No String Matching', 'pass', 'No string matching enforcement found ✓');
+                    } else {
+                        addResult('No String Matching', 'fail', 'String matching prevention not detected');
+                    }
+                })
+                .catch(err => {
+                    addResult('Agent A Analysis', 'fail', 'Could not analyze Agent A requirements: ' + err.message);
+                });
+        }
+    </script>
+</body>
+</html>

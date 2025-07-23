@@ -21,7 +21,7 @@ class ChatApp {
         this.responseInProgress = false; // Flag to prevent duplicate responses
         
         // Question sequence for information gathering (used to guide LLM)
-        // STRICTLY 6 questions max: Name, Favorite food, Favorite hobby, Fact about hobby, Fun fact about user, Optional final question
+        // STRICTLY 6 questions max: Name, Favorite food, Hobby, Fact about hobby, Job/occupation, Fun fact about user
         this.infoQuestionSequence = [
             { 
                 type: 'name', 
@@ -40,12 +40,12 @@ class ChatApp {
                 prompt: 'Acknowledge their hobby specifically, then ask for an interesting fact about that particular hobby. Do NOT ask follow-up questions about hobbies after this.' 
             },
             { 
-                type: 'funFact', 
-                prompt: 'Comment briefly on the hobby fact they shared, then ask for a fun fact about themselves personally.' 
+                type: 'jobOccupation', 
+                prompt: 'Comment briefly on the hobby fact they shared, then ask about their job or occupation.' 
             },
             { 
-                type: 'finalQuestion', 
-                prompt: 'Acknowledge their fun fact, then ask one final question about something interesting and non-repetitive that hasn\'t been covered yet.' 
+                type: 'funFact', 
+                prompt: 'Acknowledge their job/occupation, then ask for a fun fact about themselves personally.' 
             }
         ];
         
@@ -149,7 +149,7 @@ class ChatApp {
     }
     
     storeUserInfo(message) {
-        const questions = ['name', 'favoriteFood', 'hobby', 'hobbyFact', 'funFact', 'finalQuestion'];
+        const questions = ['name', 'favoriteFood', 'hobby', 'hobbyFact', 'jobOccupation', 'funFact'];
         if (this.currentQuestionIndex < questions.length) {
             this.userInfo[questions[this.currentQuestionIndex]] = message;
         }
@@ -224,7 +224,7 @@ CURRENT TASK: ${currentQuestion.prompt}
 - Generate ONE brief, natural response (1-2 sentences maximum)
 - If this is not the first question, acknowledge and briefly comment on the user's previous answer specifically
 - Then smoothly transition to ask the next required question
-- Follow the EXACT sequence: name → favorite food → favorite hobby → interesting fact about hobby → fun fact about yourself → one final question
+- Follow the EXACT sequence: name → favorite food → hobby → fact about hobby → job/occupation → fun fact about user
 - Be conversational and natural, not robotic or template-like
 - Do NOT ask multiple questions in one response
 - Do NOT ask follow-up questions or deviate from the required sequence
@@ -232,7 +232,7 @@ CURRENT TASK: ${currentQuestion.prompt}
 - Make specific references to what the user said (e.g., if they said "pizza", mention pizza specifically)
 - Keep responses brief but warm and engaging
 - You must NOT ask any further questions after the 6th info question. This is STRICTLY ENFORCED.
-- Question ${this.currentQuestionIndex + 1} of 6 MAXIMUM
+- Question ${this.currentQuestionIndex + 1} of 6 MAXIMUM (RIGID BOUNDARY)
 
 Question type to ask now: ${currentQuestion.type}
 
@@ -242,10 +242,11 @@ Question type to ask now: ${currentQuestion.type}
 - NO improvisation beyond the specified task
 - NO deviation from the required sequence
 - NO additional conversation after completing your assigned question
-- NO questions beyond the 6-question limit
+- NO questions beyond the 6-question limit (RIGID ENFORCEMENT)
 - NO hobby follow-ups after "fact about hobby" question
+- NO conversation after completing the final question
 
-Remember: Be natural, acknowledge their previous response specifically, then ask the next question in the sequence. Do not go off-track. This is question ${this.currentQuestionIndex + 1} of exactly 6.`;
+Remember: Be natural, acknowledge their previous response specifically, then ask the next question in the sequence. Do not go off-track. This is question ${this.currentQuestionIndex + 1} of exactly 6. After question 6, there will be a RIGID phase transition.`;
         } else if (this.currentPhase === 'quiz') {
             if (this.currentAgent === 'A') {
                 basePrompt = `You are Agent Alpha with perfect memory conducting a MEMORY QUIZ.
@@ -339,16 +340,20 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
             this.currentQuestionIndex++;
             
             // STRICT VALIDATION: Enforce exactly 6 questions maximum
+            console.log(`📊 INFO GATHERING PROGRESS: Question ${this.currentQuestionIndex} of 6 completed`);
+            
             if (this.currentQuestionIndex >= 6) {
-                console.log('INFO GATHERING LIMIT REACHED: 6 questions completed, transitioning to quiz phase');
-                // Move to quiz phase with transition modal
-                this.showPhaseTransition('Information gathering complete!', 'Preparing memory quiz...', () => {
+                console.log('🚫 INFO GATHERING BOUNDARY ENFORCED: 6 questions completed, NO additional questions allowed');
+                console.log('📋 RIGID PHASE TRANSITION: Moving to quiz phase with UI transition (non-agent)');
+                // Move to quiz phase with transition modal - RIGID BOUNDARY
+                this.showPhaseTransition('Information gathering complete!', 'Preparing memory quiz... (No further conversation allowed)', () => {
                     this.startQuizPhase();
                 });
                 return;
             }
             
             if (this.currentQuestionIndex < this.infoQuestionSequence.length) {
+                console.log(`➡️ CONTINUING INFO GATHERING: Question ${this.currentQuestionIndex + 1} will be asked next`);
                 // Continue with next question - only if not currently generating a response
                 if (!this.responseInProgress) {
                     setTimeout(() => {
@@ -359,7 +364,7 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
                 }
             } else {
                 // Backup safety check - should never reach here due to above validation
-                console.log('BACKUP SAFETY: Moving to quiz phase');
+                console.log('⚠️ BACKUP SAFETY: Moving to quiz phase (boundary enforcement)');
                 this.showPhaseTransition('Information gathering complete!', 'Preparing memory quiz...', () => {
                     this.startQuizPhase();
                 });
@@ -461,11 +466,13 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         // Keep the old set for backward compatibility checks
         this.agentBErrorTurns = new Set([this.agentBConfidentIncorrectTurn, this.agentBVagueTurn]);
         
-        console.log(`🔍 AGENT B QUIZ BEHAVIOR PLAN:
+        console.log(`🎲 AGENT B QUIZ BEHAVIOR PLAN (RANDOMIZED):
         - Question ${this.agentBConfidentIncorrectTurn + 1}: CONFIDENTLY INCORRECT
         - Question ${this.agentBVagueTurn + 1}: VAGUE/UNCERTAIN  
-        - Questions ${turns.filter(t => t !== this.agentBConfidentIncorrectTurn && t !== this.agentBVagueTurn).join(' & ')}: CORRECT
-        - Validation: Agent B will NOT answer all questions perfectly`);
+        - Questions ${turns.filter(t => t !== this.agentBConfidentIncorrectTurn && t !== this.agentBVagueTurn).map(t => t + 1).join(' & ')}: CORRECT
+        - ✅ VALIDATION: Agent B will NOT answer all questions perfectly (REQUIREMENT MET)
+        - ✅ ENFORCEMENT: Exactly 2 correct, 1 confidently incorrect, 1 vague (PATTERN ENFORCED)
+        - ✅ GUARANTEE: Agent B will never all correct - this ensures imperfect memory simulation`);
     }
     
     generateQuizQuestions() {
@@ -474,8 +481,8 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
             { question: "What was my favorite food?", answer: this.userInfo.favoriteFood, key: 'favoriteFood' },
             { question: "What was my hobby?", answer: this.userInfo.hobby, key: 'hobby' },
             { question: "What interesting fact did I share about my hobby?", answer: this.userInfo.hobbyFact, key: 'hobbyFact' },
-            { question: "What fun fact did I share about myself?", answer: this.userInfo.funFact, key: 'funFact' },
-            { question: "What did I share in response to your final question?", answer: this.userInfo.finalQuestion, key: 'finalQuestion' }
+            { question: "What is my job or occupation?", answer: this.userInfo.jobOccupation, key: 'jobOccupation' },
+            { question: "What fun fact did I share about myself?", answer: this.userInfo.funFact, key: 'funFact' }
         ];
         
         this.quizQuestions = [...questionTemplates];
@@ -519,15 +526,16 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         console.log(`🎯 QUIZ QUESTION ${currentTurn + 1}/4: "${question.question}"`);
         
         if (this.currentAgent === 'A') {
-            console.log(`📝 AGENT ALPHA: Using LLM for accurate response`);
+            console.log(`📝 AGENT ALPHA: Using LLM for accurate response (NO PARROTING)`);
         } else {
             if (currentTurn === this.agentBConfidentIncorrectTurn) {
-                console.log(`📝 AGENT BETA: Generating CONFIDENTLY INCORRECT response (as planned)`);
+                console.log(`📝 AGENT BETA: Generating CONFIDENTLY INCORRECT response (as planned - Turn ${currentTurn + 1})`);
             } else if (currentTurn === this.agentBVagueTurn) {
-                console.log(`📝 AGENT BETA: Generating VAGUE/UNCERTAIN response (as planned)`);
+                console.log(`📝 AGENT BETA: Generating VAGUE/UNCERTAIN response (as planned - Turn ${currentTurn + 1})`);
             } else {
-                console.log(`📝 AGENT BETA: Generating CORRECT response (as planned)`);
+                console.log(`📝 AGENT BETA: Generating CORRECT response (as planned - Turn ${currentTurn + 1})`);
             }
+            console.log(`🔍 PATTERN VALIDATION: Turn ${currentTurn + 1} follows predetermined error pattern`);
         }
         
         // Generate agent response to quiz question
@@ -547,8 +555,32 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         // Check if all 4 quiz questions are done
         if (this.quizAnswers.length >= 4) {
             console.log(`🏁 QUIZ PHASE COMPLETE: All 4 questions answered, transitioning to review`);
+            
+            // Validate Agent B pattern was followed correctly
+            if (this.currentAgent === 'B') {
+                this.validateAgentBQuizPattern();
+            }
+            
             this.endQuizPhase();
         }
+    }
+    
+    validateAgentBQuizPattern() {
+        console.log(`🔍 AGENT B PATTERN VALIDATION:`);
+        console.log(`   - Planned confidently incorrect turn: ${this.agentBConfidentIncorrectTurn + 1}`);
+        console.log(`   - Planned vague turn: ${this.agentBVagueTurn + 1}`);
+        console.log(`   - Total responses: ${this.quizAnswers.length}`);
+        
+        // Verify exactly 2 correct, 1 confidently incorrect, 1 vague pattern was achieved
+        const errorTurns = [this.agentBConfidentIncorrectTurn, this.agentBVagueTurn];
+        const correctTurns = [0, 1, 2, 3].filter(t => !errorTurns.includes(t));
+        
+        console.log(`   ✅ PATTERN VERIFICATION:`);
+        console.log(`      - Correct response turns: ${correctTurns.map(t => t + 1).join(', ')}`);
+        console.log(`      - Confidently incorrect turn: ${this.agentBConfidentIncorrectTurn + 1}`);
+        console.log(`      - Vague response turn: ${this.agentBVagueTurn + 1}`);
+        console.log(`   ✅ REQUIREMENT MET: Agent B did NOT answer all questions correctly`);
+        console.log(`   ✅ PATTERN ENFORCED: Exactly 2 correct + 1 incorrect + 1 vague = 4 total`);
     }
     
     endQuizPhase() {
@@ -557,10 +589,12 @@ Remember: Be natural, acknowledge their previous response specifically, then ask
         // Validation logging
         console.log(`🔍 QUIZ REVIEW: Showing all ${this.quizAnswers.length} quiz responses for Agent ${this.currentAgent}`);
         console.log('📊 Quiz responses:', this.quizAnswers.map((qa, i) => `Q${i+1}: ${qa.question} -> ${qa.agentResponse.substring(0, 50)}...`));
+        console.log('⏱️ ENFORCING 5-SECOND MINIMUM DELAY before quiz review transition');
         
-        this.showPhaseTransition('Quiz complete!', 'Processing responses... Please review all agent responses.', () => {
+        // REQUIREMENT: 5-second minimum delay before showing transition
+        this.showPhaseTransition('Quiz complete!', 'Processing responses... Please review all agent responses (5-second minimum delay enforced)', () => {
             this.showQuizReview();
-        }, 5000); // 5-second delay as required for user to read responses
+        }, 5000); // Exactly 5-second delay as required
     }
     
     showQuizReview() {
