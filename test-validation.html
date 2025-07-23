@@ -52,7 +52,7 @@
             // Test 3: Validate Agent B pattern
             testAgentBPattern();
             
-            // Test 4: Validate timing requirements
+            // Test 4: Validate manual transition requirements
             testTimingRequirements();
             
             // Test 5: Validate Agent A LLM usage
@@ -169,28 +169,35 @@
         }
         
         function testTimingRequirements() {
-            addResult('Timing Requirements', 'info', 'Testing 5-second minimum delay requirement...');
+            addResult('Manual Transition Requirements', 'info', 'Testing manual "Proceed" button requirements...');
             
             fetch('/script.js')
                 .then(response => response.text())
                 .then(code => {
-                    const hasFiveSecondDelay = code.includes('5000') && code.includes('5-second');
-                    const hasMinimumDelay = code.includes('minimum delay') || code.includes('MINIMUM DELAY');
+                    const hasManualTransition = code.includes('proceedFromInfoToQuiz') && code.includes('proceedFromReviewToRating');
+                    const hasManualLogging = code.includes('MANUAL TRANSITION') || code.includes('USER CONTROL ENFORCED');
+                    const hasNoAutomaticTimer = !code.includes('showPhaseTransition(\'Information gathering complete!\')') && !code.includes('showPhaseTransition(\'Quiz complete!\')');
                     
-                    if (hasFiveSecondDelay) {
-                        addResult('5-Second Delay', 'pass', '5-second minimum delay implementation found ✓');
+                    if (hasManualTransition) {
+                        addResult('Manual Transition Functions', 'pass', 'Manual transition functions implemented ✓');
                     } else {
-                        addResult('5-Second Delay', 'fail', '5-second delay not properly implemented');
+                        addResult('Manual Transition Functions', 'fail', 'Manual transition functions not found');
                     }
                     
-                    if (hasMinimumDelay) {
-                        addResult('Delay Enforcement', 'pass', 'Minimum delay enforcement found ✓');
+                    if (hasManualLogging) {
+                        addResult('Manual Transition Logging', 'pass', 'Manual transition logging found ✓');
                     } else {
-                        addResult('Delay Enforcement', 'fail', 'Delay enforcement not detected');
+                        addResult('Manual Transition Logging', 'fail', 'Manual transition logging not detected');
+                    }
+                    
+                    if (hasNoAutomaticTimer) {
+                        addResult('No Automatic Timers', 'pass', 'Automatic timers removed (manual control enforced) ✓');
+                    } else {
+                        addResult('No Automatic Timers', 'fail', 'Automatic timers still present (should be manual)');
                     }
                 })
                 .catch(err => {
-                    addResult('Timing Analysis', 'fail', 'Could not analyze timing requirements: ' + err.message);
+                    addResult('Manual Transition Analysis', 'fail', 'Could not analyze manual transition requirements: ' + err.message);
                 });
         }
         
