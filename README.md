@@ -60,10 +60,10 @@ The agent asks exactly 6 personal questions in strict order:
 2. Favorite food
 3. Favorite hobby
 4. Interesting fact about hobby
-5. Fun fact about user
-6. One final (non-repetitive, non-followup) question
+5. Job or occupation
+6. Fun fact about user
 
-**Guardrails:** Strictly limited to 6 questions with overflow prevention. No additional hobby questions after "fact about hobby".
+**Guardrails:** Strictly limited to 6 questions with overflow prevention. No additional questions allowed.
 
 ### Phase 2: Memory Quiz (Both Agents)
 - 4 randomly selected multiple choice questions about user's responses
