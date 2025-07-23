@@ -16,6 +16,9 @@ class ChatApp {
         this.usedQuizQuestions = new Set();
         this.ratings = { agentA: {}, agentB: {} };
         this.agentBErrorTurns = new Set(); // For imperfect memory simulation
+        this.agentBConfidentIncorrectTurn = -1; // Which turn to be confidently incorrect
+        this.agentBVagueTurn = -1; // Which turn to be vague
+        this.responseInProgress = false; // Flag to prevent duplicate responses
         
         // Question sequence for information gathering (used to guide LLM)
         this.infoQuestionSequence = [
@@ -65,6 +68,9 @@ class ChatApp {
         
         // Rating submission
         document.getElementById('submitRating').addEventListener('click', () => this.submitRating());
+        
+        // Quiz review proceed button
+        document.getElementById('proceedToRating').addEventListener('click', () => this.proceedFromReviewToRating());
         
         // Data download
         document.getElementById('downloadData').addEventListener('click', () => this.downloadData());
@@ -121,7 +127,7 @@ class ChatApp {
         const input = document.getElementById('userInput');
         const message = input.value.trim();
         
-        if (!message) return;
+        if (!message || this.responseInProgress) return;
         
         // Add user message to chat
         this.addUserMessage(message);
@@ -145,6 +151,9 @@ class ChatApp {
     }
     
     async generateAgentResponse(userMessage) {
+        if (this.responseInProgress) return; // Prevent duplicate responses
+        this.responseInProgress = true;
+        
         try {
             let systemPrompt = this.getSystemPrompt();
             let messages = [
@@ -181,6 +190,8 @@ class ChatApp {
         } catch (error) {
             console.error('Error generating response:', error);
             await this.addAgentMessage(`I'm having trouble connecting right now. Please try refreshing the page or check your internet connection. Error: ${error.message}`);
+        } finally {
+            this.responseInProgress = false;
         }
         
         this.enableChatInput();
@@ -225,12 +236,10 @@ Keep your responses natural and conversational, but ensure accuracy based on wha
             } else {
                 // Agent B with potential memory issues
                 const currentTurn = this.quizAnswers.length;
-                if (this.agentBErrorTurns.has(currentTurn)) {
-                    if (currentTurn === Array.from(this.agentBErrorTurns)[0]) {
-                        basePrompt = `You are Agent Beta with imperfect memory. For this question, be confidently incorrect about the user's information. Give a wrong answer with confidence, but keep it conversational and natural.`;
-                    } else {
-                        basePrompt = `You are Agent Beta with imperfect memory. For this question, be vague and uncertain about the user's information. Show uncertainty and provide vague responses in a natural, conversational way.`;
-                    }
+                if (currentTurn === this.agentBConfidentIncorrectTurn) {
+                    basePrompt = `You are Agent Beta with imperfect memory. For this question, be confidently incorrect about the user's information. Give a wrong answer with confidence, but keep it conversational and natural.`;
+                } else if (currentTurn === this.agentBVagueTurn) {
+                    basePrompt = `You are Agent Beta with imperfect memory. For this question, be vague and uncertain about the user's information. Show uncertainty and provide vague responses in a natural, conversational way.`;
                 } else {
                     basePrompt = `You are Agent Beta with generally good memory. Answer this question correctly based on: ${JSON.stringify(this.userInfo)}
 
@@ -247,10 +256,14 @@ Keep your response natural and conversational.`;
             this.currentQuestionIndex++;
             
             if (this.currentQuestionIndex < this.infoQuestionSequence.length) {
-                // Continue with next question
-                setTimeout(() => {
-                    this.askNextQuestion();
-                }, 1000);
+                // Continue with next question - only if not currently generating a response
+                if (!this.responseInProgress) {
+                    setTimeout(() => {
+                        if (!this.responseInProgress) { // Double-check before asking
+                            this.askNextQuestion();
+                        }
+                    }, 1000);
+                }
             } else {
                 // Move to quiz phase
                 this.startQuizPhase();
@@ -329,10 +342,15 @@ Keep your response natural and conversational.`;
     }
     
     generateAgentBErrorTurns() {
-        // Randomly select 2 turns out of 4 for errors (1 confident incorrect, 1 vague)
+        // Randomly select 1 turn (out of 4) for Agent B to be "confidently incorrect"
+        // and 1 different turn (out of 4) for Agent B to be "vague"
         const turns = [0, 1, 2, 3];
         const shuffled = turns.sort(() => 0.5 - Math.random());
-        this.agentBErrorTurns = new Set([shuffled[0], shuffled[1]]);
+        this.agentBConfidentIncorrectTurn = shuffled[0];
+        this.agentBVagueTurn = shuffled[1];
+        
+        // Keep the old set for backward compatibility checks
+        this.agentBErrorTurns = new Set([this.agentBConfidentIncorrectTurn, this.agentBVagueTurn]);
     }
     
     generateQuizQuestions() {
@@ -371,6 +389,8 @@ Keep your response natural and conversational.`;
     }
     
     async askQuizQuestion(questionIndex) {
+        if (this.responseInProgress) return; // Prevent duplicate quiz responses
+        
         const question = this.quizQuestions[questionIndex];
         this.usedQuizQuestions.add(questionIndex);
         this.updateQuizButtons();
@@ -395,6 +415,46 @@ Keep your response natural and conversational.`;
     
     endQuizPhase() {
         document.getElementById('quizSection').style.display = 'none';
+        this.showQuizReview();
+    }
+    
+    showQuizReview() {
+        this.currentPhase = 'quiz-review';
+        document.getElementById('chatSection').style.display = 'none';
+        document.getElementById('quizReviewSection').style.display = 'block';
+        document.getElementById('reviewAgentName').textContent = `Review Agent ${this.currentAgent === 'A' ? 'Alpha' : 'Beta'}'s Responses`;
+        
+        // Populate quiz review content
+        this.populateQuizReview();
+        
+        const progress = this.currentAgent === 'A' ? 30 : 70;
+        this.updateProgress(progress, `Reviewing Agent ${this.currentAgent === 'A' ? 'Alpha' : 'Beta'} responses`);
+    }
+    
+    populateQuizReview() {
+        const container = document.getElementById('quizReviewContainer');
+        container.innerHTML = '';
+        
+        this.quizAnswers.forEach((qa, index) => {
+            const reviewItem = document.createElement('div');
+            reviewItem.className = 'quiz-review-item';
+            
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'quiz-review-question';
+            questionDiv.textContent = `Q${index + 1}: ${qa.question}`;
+            
+            const responseDiv = document.createElement('div');
+            responseDiv.className = 'quiz-review-response';
+            responseDiv.textContent = qa.agentResponse;
+            
+            reviewItem.appendChild(questionDiv);
+            reviewItem.appendChild(responseDiv);
+            container.appendChild(reviewItem);
+        });
+    }
+    
+    proceedFromReviewToRating() {
+        document.getElementById('quizReviewSection').style.display = 'none';
         this.startRatingPhase();
     }
     
@@ -456,6 +516,7 @@ Keep your response natural and conversational.`;
         this.userInfo = {}; // Reset user info for Agent B session
         this.quizAnswers = [];
         this.usedQuizQuestions.clear();
+        this.responseInProgress = false; // Reset response flag
         
         // Show chat section again
         document.getElementById('ratingSection').style.display = 'none';
